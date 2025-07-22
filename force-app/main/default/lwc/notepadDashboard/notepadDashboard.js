@@ -8,6 +8,8 @@ import getMyNotes from '@salesforce/apex/NotepadDashboardController.getMyNotes';
 import updateNoteText from '@salesforce/apex/NotepadDashboardController.updateNoteText';
 // import toggleCompleteSrv from '@salesforce/apex/NotepadDashboardController.toggleComplete';
 import deleteNoteSrv from '@salesforce/apex/NotepadDashboardController.deleteNote';
+import getCompanyIdsByNames from '@salesforce/apex/NotepadDashboardController.getCompanyIdsByNames';
+
 
 import createNoteReminder from '@salesforce/apex/NoteReminderController.createNoteReminder';
 import NoteReminderExists from '@salesforce/apex/NoteReminderController.NoteReminderExists';
@@ -49,6 +51,7 @@ export default class NotepadDashboard extends LightningElement {
     if (data) {
       this.notes = data.map((n) => this._mapNote(n));
       this._hydrateReminders();
+      this._hydrateCompanyLinks();
       this.loading = false;
     } else if (error) {
       console.error('getMyNotes error', error);
@@ -61,21 +64,30 @@ export default class NotepadDashboard extends LightningElement {
 
   _mapNote(n) {
     const completed = n.Completed__c === true;
+    const companyName = n.TargetObjectName__c; // <-- company name text that matches Company__c.Name
+
     return {
-      ...n,
-      isEditing: false,
-      isCompleted: completed,
-      noteTextClass: completed ? 'Note-text completed-note' : 'Note-text',
-      stickyNoteClass: completed ? 'sticky-note completed' : 'sticky-note',
-      completeButtonClass: completed ? 'complete-icon-button completed' : 'complete-icon-button',
-      // completeIconSrc: completed ? noteIsCompleteIcon : noteCompleteIcon,
-      hasReminder: false,
-      notifyButtonClass: 'notify-icon-button',
-      notificationIconSrc: noteNotfiyMeOffIcon,
-      createdDisplay: this._fmtDate(n.CreatedDate),
-      dueDisplay: n.Due_by__c ? this._fmtDate(n.Due_by__c) : null
+    ...n,
+    isEditing: false,
+    isCompleted: completed,
+    noteTextClass: completed ? 'Note-text completed-note' : 'Note-text',
+    stickyNoteClass: completed ? 'sticky-note completed' : 'sticky-note',
+    completeButtonClass: completed ? 'complete-icon-button completed' : 'complete-icon-button',
+    hasReminder: false,
+    notifyButtonClass: 'notify-icon-button',
+    notificationIconSrc: noteNotfiyMeOffIcon,
+    createdDisplay: this._fmtDate(n.CreatedDate),
+    dueDisplay: n.Due_by__c ? this._fmtDate(n.Due_by__c) : null,
+
+    // --- record link fields (will be hydrated later) ---
+    companyName,                         // raw text from TargetObjectName__c
+    relatedRecordId: null,               // filled in after Apex lookup
+    relatedRecordLink: null,             // filled in after Apex lookup
+    relatedRecordName: companyName || '' // what displays in the link
     };
   }
+
+
 
   _fmtDate(iso) {
     if (!iso) return '';
@@ -113,6 +125,42 @@ export default class NotepadDashboard extends LightningElement {
         });
     });
   }
+
+  _hydrateCompanyLinks() {
+    // build unique list of non-empty names
+    const names = [...new Set(
+      this.notes
+        .map((n) => (n.companyName ? n.companyName.trim() : ''))
+        .filter((s) => s)
+    )];
+
+    if (names.length === 0) {
+      return;
+    }
+
+    getCompanyIdsByNames({ names })
+      .then((nameIdMap) => {
+        // Update each note with link data (only if company found)
+        this.notes = this.notes.map((n) => {
+          const id = nameIdMap[n.companyName];
+          if (id) {
+            return {
+              ...n,
+              relatedRecordId: id,
+              relatedRecordLink: `/lightning/r/${id}/view`,
+              relatedRecordName: n.companyName
+            };
+          }
+          return n; // leave as-is when no match
+        });
+      })
+      .catch((err) => {
+        // optional: toast or console
+        // eslint-disable-next-line no-console
+        console.error('getCompanyIdsByNames error', err);
+      });
+  }
+
 
   _replaceNote(index, updated) {
     this.notes = [

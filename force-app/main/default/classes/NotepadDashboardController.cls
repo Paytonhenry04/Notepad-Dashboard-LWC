@@ -1,20 +1,39 @@
 public with sharing class NotepadDashboardController {
 
-    // ------------------------------------------------------------------
-    // Get all notes created by the running user (Home page / personal)
-    // ------------------------------------------------------------------
+    @AuraEnabled(cacheable=true)
+    public static Map<String, Id> getCompanyIdsByNames(List<String> names) {
+    Map<String, Id> result = new Map<String, Id>();
+    if (names == null || names.isEmpty()) {
+        return result;
+    }
+
+    // Dedup incoming names (case-sensitive; adjust if needed)
+    Set<String> nameSet = new Set<String>(names);
+
+    for (Company__c c : [
+        SELECT Id, Name
+        FROM Company__c
+        WHERE Name IN :nameSet
+    ]) {
+        // Only store the first Id if duplicate names exist
+        if (!result.containsKey(c.Name)) {
+            result.put(c.Name, c.Id);
+        }
+    }
+    return result;
+    }
+
     @AuraEnabled(cacheable=true)
     public static List<Note__c> getMyNotes(Boolean includeCompleted, Integer maxRecords) {
         Id uid = UserInfo.getUserId();
         Integer lim = (maxRecords == null || maxRecords <= 0 || maxRecords > 200) ? 50 : maxRecords;
 
-        // Normalize flag (treat null as false)
         Boolean showCompleted = (includeCompleted == true);
 
         if (showCompleted) {
             return [
                 SELECT Id, Name, Note_Text__c, Completed__c, Due_by__c, Created_Time__c,
-                       CreatedDate, OwnerId, Owner.Name, Owner.FirstName, Owner.LastName
+                       CreatedDate, OwnerId, Owner.Name, Owner.FirstName, Owner.LastName, TargetObjectName__c, TargetObjectType__c
                 FROM Note__c
                 WHERE CreatedById = :uid
                 ORDER BY Due_by__c NULLS LAST, CreatedDate DESC
@@ -23,7 +42,7 @@ public with sharing class NotepadDashboardController {
         } else {
             return [
                 SELECT Id, Name, Note_Text__c, Completed__c, Due_by__c, Created_Time__c,
-                       CreatedDate, OwnerId, Owner.Name, Owner.FirstName, Owner.LastName
+                       CreatedDate, OwnerId, Owner.Name, Owner.FirstName, Owner.LastName, TargetObjectName__c, TargetObjectType__c
                 FROM Note__c
                 WHERE CreatedById = :uid
                   AND (Completed__c = FALSE OR Completed__c = NULL)
@@ -33,9 +52,7 @@ public with sharing class NotepadDashboardController {
         }
     }
 
-    // ------------------------------------------------------------------
-    // Create a new personal note
-    // ------------------------------------------------------------------
+
     // @AuraEnabled
     // public static Id createNote(String text, Datetime dueBy) {
     //     if (String.isBlank(text)) {
@@ -51,9 +68,6 @@ public with sharing class NotepadDashboardController {
     //     return n.Id;
     // }
 
-    // ------------------------------------------------------------------
-    // Update note text
-    // ------------------------------------------------------------------
     @AuraEnabled
     public static void updateNoteText(Id noteId, String newText) {
         if (noteId == null || String.isBlank(newText)) {
@@ -64,9 +78,6 @@ public with sharing class NotepadDashboardController {
         update n;
     }
 
-    // ------------------------------------------------------------------
-    // Toggle completion
-    // ------------------------------------------------------------------
     @AuraEnabled
     public static void toggleComplete(Id noteId) {
         if (noteId == null) {
@@ -77,9 +88,6 @@ public with sharing class NotepadDashboardController {
         update n;
     }
 
-    // ------------------------------------------------------------------
-    // Delete
-    // ------------------------------------------------------------------
     @AuraEnabled
     public static void deleteNote(Id noteId) {
         if (noteId == null) {

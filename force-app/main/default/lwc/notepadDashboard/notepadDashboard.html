@@ -119,6 +119,11 @@
                 <img src={deleteNoteIcon} alt="Delete" class="delete-icon" />
               </button>
             </div>
+            <template if:true={note.relatedRecordLink}>
+                <div class="note-link">
+                    <a href={note.relatedRecordLink} target="_blank">{note.relatedRecordName}</a>
+                </div>
+            </template>
           </div>
         </template>
       </template>
