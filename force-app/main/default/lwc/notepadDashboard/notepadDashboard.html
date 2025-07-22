@@ -1,67 +1,30 @@
 <template>
   <lightning-card title="My Notes" icon-name="utility:note">
-    <!-- Add Note -->
-    <!-- <template if:false={isAdding}>
-      <lightning-button
-        class="slds-m-bottom_small"
-        label="Add Note"
-        onclick={startNewNote}>
-      </lightning-button>
-    </template> -->
-
-    <!-- Add / Edit New Note Panel -->
-    <template if:true={isAdding}>
-      <div class="slds-m-bottom_small">
-        <lightning-textarea
-          label="Note Text"
-          value={noteText}
-          onchange={handleTextChange}>
-        </lightning-textarea>
-      </div>
-      <div class="slds-m-bottom_small">
-        <lightning-input
-          type="datetime"
-          label="Due By (optional)"
-          value={newNoteDue}
-          onchange={handleDueByChange}>
-        </lightning-input>
-      </div>
-      <lightning-button
-        variant="brand"
-        label="Save"
-        class="slds-m-right_small"
-        onclick={saveNote}>
-      </lightning-button>
-      <lightning-button
-        label="Cancel"
-        onclick={cancelNote}>
-      </lightning-button>
-      <hr class="slds-m-vertical_small" />
-    </template>
-
-    <!-- Spinner -->
     <template if:true={loading}>
       <lightning-spinner size="medium"></lightning-spinner>
     </template>
 
-    <!-- Notes grid -->
     <div class="NoteContainer">
       <template if:true={hasNotes}>
         <template for:each={notes} for:item="note">
-          <div key={note.Id} class={note.stickyNoteClass}>
-            <!-- Reminder bell -->
+          <div key={note.Id}
+               class={note.stickyNoteClass}
+               data-record-id={note.relatedRecordId}
+               data-note-id={note.Id}
+               style="cursor:pointer;"
+               onclick={handleNoteCardClick}>
+            
+
             <div class="notify-icon-container">
-                <button
-                    class="notify-icon-button {note.reminderStateClass}"
-                    data-id={note.Id}
-                    onclick={toggleReminder}
-                    title="Toggle reminder">
-                    <img src={note.notificationIconSrc} alt="Notify" class="notify-icon"/>
-                </button>
+              <button class={note.notifyButtonClass}
+                      data-id={note.Id}
+                      onclick={toggleReminder}
+                      title="Toggle reminder">
+                <img src={note.notificationIconSrc} alt="Notify" class="notify-icon"/>
+              </button>
             </div>
 
-
-            <!-- Note body / edit -->
+            <!-- Note body -->
             <template if:false={note.isEditing}>
               <div class={note.noteTextClass}>
                 <p class="note-display-text">{note.Note_Text__c}</p>
@@ -74,62 +37,51 @@
               </div>
             </template>
 
+            <!-- Edit mode -->
             <template if:true={note.isEditing}>
-              <lightning-textarea
-                value={note.Note_Text__c}
-                data-id={note.Id}
-                onchange={handleEditChange}>
+              <lightning-textarea value={note.Note_Text__c}
+                                  data-id={note.Id}
+                                  onchange={handleEditChange}>
               </lightning-textarea>
               <div class="slds-m-top_x-small">
-                <lightning-button
-                  variant="brand"
-                  label="Save"
-                  data-id={note.Id}
-                  onclick={saveUpdatedNote}>
+                <lightning-button variant="brand"
+                                  label="Save"
+                                  data-id={note.Id}
+                                  onclick={saveUpdatedNote}>
                 </lightning-button>
-                <lightning-button
-                  label="Cancel"
-                  data-id={note.Id}
-                  onclick={cancelEdit}>
+                <lightning-button label="Cancel"
+                                  data-id={note.Id}
+                                  onclick={cancelEdit}>
                 </lightning-button>
               </div>
             </template>
 
             <!-- Actions -->
             <div class="slds-m-top_x-small button-spacing">
-              <!-- <button
-                class={note.completeButtonClass}
-                data-id={note.Id}
-                onclick={toggleComplete}
-                title="Complete / Incomplete">
-                <img src={note.completeIconSrc} alt="Complete" class="complete-icon" />
-              </button> -->
-              <button
-                class="edit-icon-button"
-                data-id={note.Id}
-                onclick={toggleEdit}
-                title="Edit">
+              <button class="edit-icon-button"
+                      data-id={note.Id}
+                      onclick={toggleEdit}
+                      title="Edit">
                 <img src={editNoteIcon} alt="Edit" class="edit-icon" />
               </button>
-              <button
-                class="delete-icon-button"
-                data-id={note.Id}
-                onclick={confirmDelete}
-                title="Delete">
+              <button class="delete-icon-button"
+                      data-id={note.Id}
+                      onclick={confirmDelete}
+                      title="Delete">
                 <img src={deleteNoteIcon} alt="Delete" class="delete-icon" />
               </button>
             </div>
-            <template if:true={note.relatedRecordLink}>
-                <div class="note-link">
-                    <a href={note.relatedRecordLink} target="_blank">{note.relatedRecordName}</a>
-                </div>
+
+            <!-- Company Name (plain text at bottom) -->
+            <template if:true={note.companyName}>
+              <div class="note-link">{note.companyName}</div>
             </template>
           </div>
         </template>
       </template>
 
       <template if:false={hasNotes}>
-        <p class="slds-m-around_medium">No notes yet. Click "Add Note" to create one.</p>
+        <p class="slds-m-around_medium">No notes yet.</p>
       </template>
     </div>
 
@@ -149,15 +101,13 @@
             </template>
           </div>
           <footer class="slds-modal__footer">
-            <lightning-button
-              variant="neutral"
-              label="Cancel"
-              onclick={cancelDelete}>
+            <lightning-button variant="neutral"
+                              label="Cancel"
+                              onclick={cancelDelete}>
             </lightning-button>
-            <lightning-button
-              variant="destructive"
-              label="Delete"
-              onclick={deleteNote}>
+            <lightning-button variant="destructive"
+                              label="Delete"
+                              onclick={deleteNote}>
             </lightning-button>
           </footer>
         </div>

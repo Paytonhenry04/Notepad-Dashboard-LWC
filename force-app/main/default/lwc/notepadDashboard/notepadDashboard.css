@@ -239,10 +239,12 @@
   bottom: 0.5rem;
   right: 1rem;
   font-size: 0.8rem;
-  text-decoration: underline;
-  color: #005fb2;
+  text-decoration: none; 
+  color: #333;     
   font-weight: 500;
+  cursor: default; 
 }
+
 .note-link a:hover {
   color: #003a75;
   text-decoration: none;

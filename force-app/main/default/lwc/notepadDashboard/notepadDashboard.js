@@ -1,30 +1,30 @@
 import { LightningElement, api, track, wire } from 'lwc';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
-
+import { NavigationMixin } from 'lightning/navigation';
 import USER_ID from '@salesforce/user/Id';
 
+// Apex – Notes
 import getMyNotes from '@salesforce/apex/NotepadDashboardController.getMyNotes';
-// import createNote from '@salesforce/apex/NotepadDashboardController.createNote';
 import updateNoteText from '@salesforce/apex/NotepadDashboardController.updateNoteText';
-// import toggleCompleteSrv from '@salesforce/apex/NotepadDashboardController.toggleComplete';
 import deleteNoteSrv from '@salesforce/apex/NotepadDashboardController.deleteNote';
+
+// Apex – Company Lookup
 import getCompanyIdsByNames from '@salesforce/apex/NotepadDashboardController.getCompanyIdsByNames';
 
-
+// Apex – Reminders
 import createNoteReminder from '@salesforce/apex/NoteReminderController.createNoteReminder';
 import NoteReminderExists from '@salesforce/apex/NoteReminderController.NoteReminderExists';
 import removeNoteReminder from '@salesforce/apex/NoteReminderController.removeNoteReminder';
 
 import { refreshApex } from '@salesforce/apex';
 
+// Static resource icons
 import noteEditIcon from '@salesforce/resourceUrl/noteEditIcon';
 import noteDeleteIcon from '@salesforce/resourceUrl/noteDeleteIcon';
-// import noteCompleteIcon from '@salesforce/resourceUrl/noteCompleteIcon';
-// import noteIsCompleteIcon from '@salesforce/resourceUrl/noteIsCompleteIcon';
 import noteNotifyMeOnIcon from '@salesforce/resourceUrl/noteNotifyMeOnIcon';
 import noteNotfiyMeOffIcon from '@salesforce/resourceUrl/noteNotfiyMeOffIcon';
 
-export default class NotepadDashboard extends LightningElement {
+export default class NotepadDashboard extends NavigationMixin(LightningElement) {
   @api includecompleted;
   @api maxrecords;
 
@@ -38,20 +38,22 @@ export default class NotepadDashboard extends LightningElement {
 
   showDeleteModal = false;
   notePendingDelete;
-
   wiredResult;
 
   editNoteIcon = noteEditIcon;
   deleteNoteIcon = noteDeleteIcon;
 
+  // --------------------------------------------------------------------------
+  // Wire: load my notes
+  // --------------------------------------------------------------------------
   @wire(getMyNotes, { includeCompleted: '$includecompleted', maxRecords: '$maxrecords' })
   wiredNotes(result) {
     this.wiredResult = result;
     const { data, error } = result;
     if (data) {
       this.notes = data.map((n) => this._mapNote(n));
-      this._hydrateReminders();
-      this._hydrateCompanyLinks();
+      this._hydrateCompanyLinks();  // Populate Company__c Id links
+      this._hydrateReminders();     // Populate reminder states
       this.loading = false;
     } else if (error) {
       console.error('getMyNotes error', error);
@@ -62,32 +64,29 @@ export default class NotepadDashboard extends LightningElement {
     }
   }
 
+  // --------------------------------------------------------------------------
+  // Mapping helpers
+  // --------------------------------------------------------------------------
   _mapNote(n) {
     const completed = n.Completed__c === true;
-    const companyName = n.TargetObjectName__c; // <-- company name text that matches Company__c.Name
+    const companyName = n.TargetObjectName__c; // text field storing company name
 
     return {
-    ...n,
-    isEditing: false,
-    isCompleted: completed,
-    noteTextClass: completed ? 'Note-text completed-note' : 'Note-text',
-    stickyNoteClass: completed ? 'sticky-note completed' : 'sticky-note',
-    completeButtonClass: completed ? 'complete-icon-button completed' : 'complete-icon-button',
-    hasReminder: false,
-    notifyButtonClass: 'notify-icon-button',
-    notificationIconSrc: noteNotfiyMeOffIcon,
-    createdDisplay: this._fmtDate(n.CreatedDate),
-    dueDisplay: n.Due_by__c ? this._fmtDate(n.Due_by__c) : null,
-
-    // --- record link fields (will be hydrated later) ---
-    companyName,                         // raw text from TargetObjectName__c
-    relatedRecordId: null,               // filled in after Apex lookup
-    relatedRecordLink: null,             // filled in after Apex lookup
-    relatedRecordName: companyName || '' // what displays in the link
+      ...n,
+      isEditing: false,
+      isCompleted: completed,
+      noteTextClass: completed ? 'Note-text completed-note' : 'Note-text',
+      stickyNoteClass: completed ? 'sticky-note completed' : 'sticky-note',
+      completeButtonClass: completed ? 'complete-icon-button completed' : 'complete-icon-button',
+      hasReminder: false,
+      notifyButtonClass: 'notify-icon-button',
+      notificationIconSrc: noteNotfiyMeOffIcon,
+      createdDisplay: this._fmtDate(n.CreatedDate),
+      dueDisplay: n.Due_by__c ? this._fmtDate(n.Due_by__c) : null,
+      companyName,
+      relatedRecordId: null,     // Will be filled by Apex lookup
     };
   }
-
-
 
   _fmtDate(iso) {
     if (!iso) return '';
@@ -106,6 +105,55 @@ export default class NotepadDashboard extends LightningElement {
     }
   }
 
+  // --------------------------------------------------------------------------
+  // Hydrate Company Links
+  // --------------------------------------------------------------------------
+  _hydrateCompanyLinks() {
+  // collect unique canonical names (trim + lowercase) but keep original mapping
+  const canonToOriginal = {};
+  const canonNames = [];
+
+  this.notes.forEach((n) => {
+    const raw = n.companyName;
+    if (!raw) return;
+    const canon = raw.trim().toLowerCase();
+    if (!canon) return;
+    if (!canonToOriginal[canon]) {
+      canonToOriginal[canon] = raw; // store first raw version seen
+      canonNames.push(raw.trim());  // send trimmed original to Apex
+    }
+  });
+
+  if (canonNames.length === 0) return;
+
+  getCompanyIdsByNames({ names: canonNames })
+    .then((nameIdMap) => {
+      // Reindex Apex results canonically (trim + lowercase)
+      const normMap = {};
+      Object.keys(nameIdMap).forEach((rawName) => {
+        const canon = rawName.trim().toLowerCase();
+        normMap[canon] = nameIdMap[rawName];
+      });
+
+      // Apply to notes
+      this.notes = this.notes.map((n) => {
+        if (!n.companyName) return n;
+        const canon = n.companyName.trim().toLowerCase();
+        const id = normMap[canon];
+        return id
+          ? { ...n, relatedRecordId: id }
+          : n;
+      });
+    })
+    .catch((err) => {
+      // eslint-disable-next-line no-console
+      console.error('getCompanyIdsByNames error', err);
+    });
+  }
+
+  // --------------------------------------------------------------------------
+  // Hydrate Reminder State
+  // --------------------------------------------------------------------------
   _hydrateReminders() {
     this.notes.forEach((note, idx) => {
       NoteReminderExists({ userId: this.currentUserId, NoteId: note.Id })
@@ -126,42 +174,6 @@ export default class NotepadDashboard extends LightningElement {
     });
   }
 
-  _hydrateCompanyLinks() {
-    // build unique list of non-empty names
-    const names = [...new Set(
-      this.notes
-        .map((n) => (n.companyName ? n.companyName.trim() : ''))
-        .filter((s) => s)
-    )];
-
-    if (names.length === 0) {
-      return;
-    }
-
-    getCompanyIdsByNames({ names })
-      .then((nameIdMap) => {
-        // Update each note with link data (only if company found)
-        this.notes = this.notes.map((n) => {
-          const id = nameIdMap[n.companyName];
-          if (id) {
-            return {
-              ...n,
-              relatedRecordId: id,
-              relatedRecordLink: `/lightning/r/${id}/view`,
-              relatedRecordName: n.companyName
-            };
-          }
-          return n; // leave as-is when no match
-        });
-      })
-      .catch((err) => {
-        // optional: toast or console
-        // eslint-disable-next-line no-console
-        console.error('getCompanyIdsByNames error', err);
-      });
-  }
-
-
   _replaceNote(index, updated) {
     this.notes = [
       ...this.notes.slice(0, index),
@@ -170,9 +182,50 @@ export default class NotepadDashboard extends LightningElement {
     ];
   }
 
+  // --------------------------------------------------------------------------
+  // Navigation - click on the sticky note
+  // --------------------------------------------------------------------------
+  handleNoteCardClick(event) {
+    // Ignore clicks on interactive child controls
+    const interactive = event.target.closest('button, a, lightning-button, lightning-input, lightning-textarea');
+    if (interactive) return;
+
+    // Grab record id from dataset
+    const recordId = event.currentTarget.dataset.recordId;
+    if (!recordId) return; // nothing to navigate to
+
+    // Optional: figure out the object to navigate (default Company__c)
+    // Because the dataset only has the Id, we lookup note in memory:
+    const noteId = event.currentTarget.dataset.noteId; // we'll add this in HTML (see below)
+    let apiName = 'Company__c';
+    if (noteId) {
+      const n = this.notes.find((x) => x.Id === noteId);
+      if (n && n.TargetObjectType__c) {
+        apiName = n.TargetObjectType__c; // expect e.g., Company__c
+      }
+    }
+
+    this[NavigationMixin.Navigate]({
+      type: 'standard__recordPage',
+      attributes: {
+        recordId,
+        objectApiName: apiName,
+        actionName: 'view'
+      }
+    });
+  }
+
+
+  // --------------------------------------------------------------------------
+  // Getters
+  // --------------------------------------------------------------------------
   get hasNotes() {
     return this.notes && this.notes.length > 0;
   }
+
+  // --------------------------------------------------------------------------
+  // Edit
+  // --------------------------------------------------------------------------
   toggleEdit(e) {
     const id = e.currentTarget.dataset.id;
     this.notes = this.notes.map((n) =>
@@ -213,6 +266,9 @@ export default class NotepadDashboard extends LightningElement {
       });
   }
 
+  // --------------------------------------------------------------------------
+  // Delete
+  // --------------------------------------------------------------------------
   confirmDelete(e) {
     const id = e.currentTarget.dataset.id;
     this.notePendingDelete = this.notes.find((n) => n.Id === id);
@@ -240,6 +296,9 @@ export default class NotepadDashboard extends LightningElement {
       });
   }
 
+  // --------------------------------------------------------------------------
+  // Reminder bell
+  // --------------------------------------------------------------------------
   toggleReminder(e) {
     const NoteId = e.currentTarget.dataset.id;
     const NoteIndex = this.notes.findIndex((n) => n.Id === NoteId);
@@ -254,27 +313,13 @@ export default class NotepadDashboard extends LightningElement {
               updatedNote.hasReminder = true;
               updatedNote.notifyButtonClass = 'notify-icon-button pressed-notification';
               updatedNote.notificationIconSrc = noteNotifyMeOnIcon;
-              this.notes = [
-                ...this.notes.slice(0, NoteIndex),
-                updatedNote,
-                ...this.notes.slice(NoteIndex + 1)
-              ];
-
-              this._toast(
-                'Notification Enabled',
-                'You will be notified about this note.',
-                'success'
-              );
-
+              this._replaceNote(NoteIndex, updatedNote);
+              this._toast('Notification Enabled', 'You will be notified about this note.', 'success');
               refreshApex(this.wiredResult);
             })
             .catch((error) => {
               console.error('Error creating Note reminder:', error);
-              this._toast(
-                'Error',
-                'Failed to enable notification.',
-                'error'
-              );
+              this._toast('Error', 'Failed to enable notification.', 'error');
             });
         } else {
           removeNoteReminder({ userId: this.currentUserId, NoteId })
@@ -283,27 +328,13 @@ export default class NotepadDashboard extends LightningElement {
               updatedNote.hasReminder = false;
               updatedNote.notifyButtonClass = 'notify-icon-button';
               updatedNote.notificationIconSrc = noteNotfiyMeOffIcon;
-              this.notes = [
-                ...this.notes.slice(0, NoteIndex),
-                updatedNote,
-                ...this.notes.slice(NoteIndex + 1)
-              ];
-
-              this._toast(
-                'Notification Disabled',
-                'You will no longer be notified about this note.',
-                'success'
-              );
-
+              this._replaceNote(NoteIndex, updatedNote);
+              this._toast('Notification Disabled', 'You will no longer be notified about this note.', 'success');
               refreshApex(this.wiredResult);
             })
             .catch((error) => {
               console.error('Error removing Note reminder:', error);
-              this._toast(
-                'Error',
-                'Failed to disable notification.',
-                'error'
-              );
+              this._toast('Error', 'Failed to disable notification.', 'error');
             });
         }
       })
@@ -312,8 +343,17 @@ export default class NotepadDashboard extends LightningElement {
       });
   }
 
-
+  // --------------------------------------------------------------------------
+  // Toast helper
+  // --------------------------------------------------------------------------
   _toast(title, message, variant) {
     this.dispatchEvent(new ShowToastEvent({ title, message, variant }));
   }
+
+  getNoteCardStyle(note) {
+  // show pointer only when we have an Id
+  return note.relatedRecordId ? 'cursor:pointer;' : '';
+  }
+
+
 }
