@@ -1,0 +1,235 @@
+.completed-note {
+  color: white;
+}
+
+.completed-note .note-display-text {
+  color: white !important;
+}
+
+.sticky-note.completed {
+  background-color: #46c45a;
+}
+
+.NoteContainer {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 16px;
+  padding: 1rem;
+  align-items: start;
+  transition: all 0.3s ease-in-out;
+}
+
+.sticky-note {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  padding-right: 3rem;
+  background-color: #fff740;
+  padding: 1rem;
+  border-radius: 8px;
+  box-shadow: 2px 4px 6px rgba(0, 0, 0, 0.2);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  position: relative;
+  overflow: hidden;
+  height: auto;
+  min-height: 100px;
+  transition: all 0.3s ease-in-out, transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+}
+
+.pressed-notification {
+  background-color: #ccc;
+  border: 1px solid #999;
+  transform: translateY(2px);
+}
+
+.sticky-note:hover {
+  transform: rotate(-1deg);
+  transition: transform 0.2s ease;
+}
+
+.sticky-note:hover .notify-icon,
+.sticky-note:hover .complete-icon,
+.sticky-note:hover .edit-icon,
+.sticky-note:hover .delete-icon {
+  transform: rotate(1deg);
+}
+
+.notify-icon-container {
+  position: absolute;
+  top: 0.5rem;
+  right: 1rem;
+  z-index: 1;
+}
+
+.custom-delete-button {
+  background-color: white;
+  color: red;
+  font-weight: bold;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+}
+
+.custom-delete-button:hover {
+  background-color: #ffeaea;
+  color: darkred;
+  border: 1px solid darkred;
+  cursor: pointer;
+}
+
+.Note-text {
+  width: 75%;
+  height: auto;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: normal;
+  white-space: normal;
+}
+
+.button-spacing {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.5rem;
+  margin-left: -0.25rem;
+}
+
+.note-action-button {
+  height: 2rem;
+  min-height: 2rem;
+  padding: 0 0.75rem;
+}
+
+.button-spacer {
+  flex: 1;
+}
+
+.edit-icon-button {
+  background: transparent;
+  border: none;
+  border-radius: 0.25rem;
+  padding: 0.25rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  transition: transform 0.2s ease-in-out;
+}
+
+.edit-icon-button:hover {
+  transform: translateY(-2px);
+}
+
+.edit-icon {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  transition: transform 0.2s ease-in-out;
+}
+
+.edit-icon-button:hover .edit-icon {
+  transform: scale(1.1);
+}
+
+.delete-icon-button {
+  background: transparent;
+  border: none;
+  border-radius: 0.25rem;
+  padding: 0.25rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  transition: transform 0.2s ease-in-out;
+}
+
+.delete-icon-button:hover {
+  transform: translateY(-2px);
+}
+
+.delete-icon {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+  transition: transform 0.2s ease-in-out, filter 0.2s ease-in-out;
+}
+
+.delete-icon-button:hover .delete-icon {
+  transform: scale(1.1);
+  filter: brightness(0) saturate(100%) invert(13%) sepia(94%) saturate(7151%) hue-rotate(3deg) brightness(90%) contrast(118%);
+}
+
+.complete-icon-button {
+  background: transparent;
+  border: none;
+  border-radius: 0.25rem;
+  padding: 0.25rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  transition: transform 0.2s ease-in-out;
+}
+
+.complete-icon-button:hover {
+  transform: translateY(-2px);
+}
+
+.complete-icon {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  transition: transform 0.2s ease-in-out, filter 0.2s ease-in-out;
+}
+
+.complete-icon-button:hover .complete-icon {
+  transform: scale(1.1);
+  filter: brightness(0) saturate(100%) invert(44%) sepia(78%) saturate(2476%) hue-rotate(92deg) brightness(101%) contrast(107%);
+}
+
+.complete-icon-button.completed:hover .complete-icon {
+  transform: scale(1.1);
+  filter: brightness(0) saturate(100%) invert(13%) sepia(94%) saturate(7151%) hue-rotate(3deg) brightness(90%) contrast(118%);
+}
+
+.notify-icon-button {
+  background: transparent;
+  border: none;
+  border-radius: 0.25rem;
+  padding: 0.25rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  transition: transform 0.2s ease-in-out;
+}
+
+.notify-icon-button:hover {
+  transform: translateY(-2px);
+}
+
+.notify-icon {
+  width: 50px;
+  height: 50px;
+  object-fit: contain;
+  transition: transform 0.2s ease-in-out;
+}
+
+.notify-icon-button:hover .notify-icon {
+  transform: scale(1.1);
+}
+
+.note-display-text {
+  font-weight: 600;
+  font-size: 1.1rem;
+  line-height: 1.4;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  color: rgb(61, 60, 60);
+}
