@@ -13,6 +13,13 @@
         onchange={handleTextChange}
         class="slds-m-bottom_small"
       ></lightning-textarea>
+      <!-- <lightning-input
+        type="checkbox"
+        label="Public (visible to everyone)"
+        checked={newNoteIsPublic}                  
+        onchange={handlePublicChange}
+        class="slds-m-bottom_small">
+      </lightning-input> -->
       <lightning-button
         label="Save"
         variant="brand"
@@ -34,6 +41,13 @@
               onclick={stopPropagation}
               class="slds-m-bottom_small"
             ></lightning-textarea>
+            <!-- <lightning-input
+            type="checkbox"
+            label="Public (visible to everyone)"
+            checked={newNoteIsPublic}                  
+            onchange={handlePublicChange}
+            class="slds-m-bottom_small">
+            </lightning-input> -->
 
             <!-- Show Save/Delete only if owner -->
             <template if:true={Note.isOwner}>

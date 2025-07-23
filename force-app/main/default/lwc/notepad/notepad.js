@@ -1,15 +1,18 @@
 import { LightningElement, api, wire } from 'lwc';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import USER_ID from '@salesforce/user/Id';
+import { refreshApex } from '@salesforce/apex';
+
 import getNotesForRecord from '@salesforce/apex/NoteController.getNotesForRecord';
 import createNote from '@salesforce/apex/NoteController.createNote';
 import updateNote from '@salesforce/apex/NoteController.updateNote';
-import { refreshApex } from '@salesforce/apex';
 import deleteNote from '@salesforce/apex/NoteController.deleteNote';
 import updateNoteCompleteStatus from '@salesforce/apex/NoteController.updateNoteCompleteStatus';
+
 import createNoteReminder from '@salesforce/apex/NoteReminderController.createNoteReminder';
 import NoteReminderExists from '@salesforce/apex/NoteReminderController.NoteReminderExists';
 import removeNoteReminder from '@salesforce/apex/NoteReminderController.removeNoteReminder';
+
 
 import noteEditIcon from '@salesforce/resourceUrl/noteEditIcon';
 import noteDeleteIcon from '@salesforce/resourceUrl/noteDeleteIcon';

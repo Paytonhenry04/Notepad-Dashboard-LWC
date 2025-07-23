@@ -124,4 +124,3 @@ public with sharing class NotepadDashboardController {
     }
 
 }
-
